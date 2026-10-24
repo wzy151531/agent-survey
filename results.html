@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实时统计 · 企业 Agent 使用情况调查</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f7f7f8; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  .card { background: #fff; border-radius: 16px; padding: 32px 24px; max-width: 560px; width: 100%; box-shadow: 0 2px 16px rgba(0,0,0,.06); }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  .total { font-size: 15px; color: #666; margin-bottom: 28px; }
+  .row { margin-bottom: 24px; }
+  .label { display: flex; justify-content: space-between; font-size: 18px; margin-bottom: 8px; }
+  .label .pct { color: #666; }
+  .bar { height: 28px; background: #eee; border-radius: 8px; overflow: hidden; }
+  .fill { height: 100%; transition: width .4s; }
+  .fill.yes { background: #1677ff; }
+  .fill.no { background: #8a8f98; }
+  #updated { margin-top: 8px; font-size: 13px; color: #999; }
+  #err { color: #e5484d; font-size: 14px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>您的企业中是否有已部署使用中的 Agent？</h1>
+  <div class="total" id="total">共 0 票</div>
+  <div class="row">
+    <div class="label"><span>是</span><span><b id="yesCount">0</b> 票 <span class="pct" id="yesPct">0%</span></span></div>
+    <div class="bar"><div class="fill yes" id="yesBar" style="width:0%"></div></div>
+  </div>
+  <div class="row">
+    <div class="label"><span>否</span><span><b id="noCount">0</b> 票 <span class="pct" id="noPct">0%</span></span></div>
+    <div class="bar"><div class="fill no" id="noBar" style="width:0%"></div></div>
+  </div>
+  <div id="updated"></div>
+  <div id="err"></div>
+</div>
+<script src="config.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const API = (params.get("api") || window.SURVEY_API_BASE || "").replace(/\/$/, "");
+  const $ = id => document.getElementById(id);
+
+  async function refresh() {
+    if (!API) { $("err").textContent = "统计接口尚未配置。"; return; }
+    try {
+      const res = await fetch(API + "/api/stats");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const s = await res.json();
+      const total = s.total || 0;
+      const yesPct = total ? Math.round(s.yes / total * 100) : 0;
+      const noPct = total ? 100 - yesPct : 0;
+      $("yesCount").textContent = s.yes;
+      $("noCount").textContent = s.no;
+      $("yesPct").textContent = yesPct + "%";
+      $("noPct").textContent = noPct + "%";
+      $("yesBar").style.width = yesPct + "%";
+      $("noBar").style.width = noPct + "%";
+      $("total").textContent = "共 " + total + " 票";
+      $("updated").textContent = "更新于 " + new Date().toLocaleTimeString();
+      $("err").textContent = "";
+    } catch (e) {
+      $("err").textContent = "统计拉取失败，正在重试…";
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
