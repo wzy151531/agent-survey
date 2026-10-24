@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>企业 Agent 使用情况调查</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f7f7f8; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  .card { background: #fff; border-radius: 16px; padding: 32px 24px; max-width: 480px; width: 100%; box-shadow: 0 2px 16px rgba(0,0,0,.06); text-align: center; }
+  h1 { font-size: 22px; line-height: 1.5; margin-bottom: 32px; }
+  .btns { display: flex; gap: 16px; }
+  button { flex: 1; font-size: 20px; padding: 20px 0; border: none; border-radius: 12px; cursor: pointer; color: #fff; }
+  button:active { opacity: .85; }
+  #yes { background: #1677ff; }
+  #no { background: #8a8f98; }
+  button:disabled { opacity: .5; cursor: default; }
+  #msg { margin-top: 24px; font-size: 15px; color: #666; min-height: 22px; }
+  #msg.ok { color: #1677ff; }
+  #msg.err { color: #e5484d; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>您的企业中是否有已部署使用中的 Agent？</h1>
+  <div class="btns">
+    <button id="yes">是</button>
+    <button id="no">否</button>
+  </div>
+  <div id="msg"></div>
+</div>
+<script src="config.js"></script>
+<script>
+  // 接口地址优先级：URL 参数 ?api= > config.js；本地测试可用 ?api=http://localhost:8000
+  const params = new URLSearchParams(location.search);
+  const API = (params.get("api") || window.SURVEY_API_BASE || "").replace(/\/$/, "");
+  const msg = document.getElementById("msg");
+  const btnYes = document.getElementById("yes");
+  const btnNo = document.getElementById("no");
+
+  function setMsg(text, cls) { msg.textContent = text; msg.className = cls || ""; }
+  function lockThanks() {
+    btnYes.disabled = true; btnNo.disabled = true;
+    setMsg("感谢参与！", "ok");
+  }
+
+  if (localStorage.getItem("agent-survey-voted")) { lockThanks(); }
+
+  if (!API) {
+    setMsg("投票接口尚未配置，请联系主办方。", "err");
+    btnYes.disabled = true; btnNo.disabled = true;
+  }
+
+  async function vote(answer) {
+    btnYes.disabled = true; btnNo.disabled = true;
+    setMsg("提交中…");
+    try {
+      const res = await fetch(API + "/api/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      localStorage.setItem("agent-survey-voted", "1");
+      lockThanks();
+    } catch (e) {
+      btnYes.disabled = false; btnNo.disabled = false;
+      setMsg("提交失败，请检查网络后重试。", "err");
+    }
+  }
+
+  btnYes.addEventListener("click", () => vote("yes"));
+  btnNo.addEventListener("click", () => vote("no"));
+</script>
+</body>
+</html>
