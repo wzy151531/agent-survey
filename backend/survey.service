@@ -1,0 +1,13 @@
+[Unit]
+Description=企业 Agent 问卷后端
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/agent-survey
+ExecStart=/usr/bin/python3 /opt/agent-survey/server.py 8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
